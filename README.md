@@ -10,6 +10,4 @@ python -m venv myenv
 python -m pip install -r requirements.txt
 ```
 
-Aggiungere un file `logo.png` alla directory
-
 Per creare l'eseguibile, eseguire `make.bat`

@@ -9,7 +9,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4, landscape, letter
 
 #src = os.path.join(os.path.dirname(__file__),'bollettino.pdf')
-from data import bollettino_pdf, logo_png
+from data import bollettino_pdf
 # python -c "with open('bollettino.pdf', 'rb') as f: data = f.read() ; print('bollettino_pdf=',end='') ; print(data)" > data.py
 
 LINE_HEIGHT = 16
@@ -53,12 +53,12 @@ fields = {
 }
 
 
-
+PAGE_SIZE = landscape(A4)
 def make_page(bollettino: Bollettino):
     packet = io.BytesIO()
-    can = canvas.Canvas(packet, pagesize=landscape(A4))
-    logo = ImageReader(io.BytesIO(logo_png))
-    can.drawImage(logo, 100,300, width=200, preserveAspectRatio=True)
+    can = canvas.Canvas(packet, pagesize=PAGE_SIZE)
+    #logo = ImageReader(io.BytesIO(logo_png))
+    #can.drawImage(logo, 100,300, width=200, preserveAspectRatio=True)
     can.setFont('Courier', 13)
     for k,l in fields.items():
         val = bollettino.__getattribute__(k.lower())
@@ -69,14 +69,22 @@ def make_page(bollettino: Bollettino):
     new_pdf = PdfFileReader(packet)
     return new_pdf.getPage(0)
 
-def compila(data: list[Bollettino], path:str, withSingles: bool, withPrint: bool):
+def compila(data: list[Bollettino], path:str, withSingles: bool, withPrint: bool, graphics:list[str]):
     # existing_pdf = PdfFileReader(open(src, "rb"))
     existing_pdf = PdfFileReader(io.BytesIO(bollettino_pdf))
     output = PdfFileWriter()
     page = existing_pdf.getPage(0)
+    graphics_pdf = PdfFileWriter()
+    graphics_pdf.addBlankPage(*PAGE_SIZE)
+    graphics_page = graphics_pdf.getPage(0)
+    for g in graphics:
+        print(f"Carico {g}...")
+        g_pdf = PdfFileReader(open(g, "rb"))
+        graphics_page.mergePage(g_pdf.getPage(0))
     for bollettino in data:
         newpage = make_page(bollettino)
         newpage.mergePage(page)
+        newpage.mergePage(graphics_page)
         output.addPage(newpage)
         if withSingles:
             output_single = PdfFileWriter()
@@ -88,4 +96,3 @@ def compila(data: list[Bollettino], path:str, withSingles: bool, withPrint: bool
         outputStream = open(os.path.join(path,"stampa.pdf"), "wb")
         output.write(outputStream)
         outputStream.close()
-
