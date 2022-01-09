@@ -1,2 +1,3 @@
 python -c "with open('bollettino.pdf', 'rb') as f: data = f.read() ; print('bollettino_pdf=',end='') ; print(data)" > data.py
+python -c "with open('OCRB2.ttf', 'rb') as f: data = f.read() ; print('ocrb2_ttf=',end='') ; print(data)" >> data.py
 c:\users\info\appdata\roaming\python\python39\Scripts\pyinstaller.exe -F main.py data.py bollettino.py compila.py italian_int.py -n compila_bollettino -i icon.ico

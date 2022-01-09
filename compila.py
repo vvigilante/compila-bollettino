@@ -7,13 +7,15 @@ from PyPDF2 import PdfFileWriter, PdfFileReader
 import io
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4, landscape, letter
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
 
 #src = os.path.join(os.path.dirname(__file__),'bollettino.pdf')
-from data import bollettino_pdf
+from data import bollettino_pdf, ocrb2_ttf
 # python -c "with open('bollettino.pdf', 'rb') as f: data = f.read() ; print('bollettino_pdf=',end='') ; print(data)" > data.py
 
-LINE_HEIGHT = 16
-BOXED_CHAR_SPACE = 4.75
+DEFAULT_LINE_HEIGHT = 16
+BOXED_CHAR_SPACE = 6.8
 @dataclass
 class Field:
     x: int
@@ -22,6 +24,7 @@ class Field:
     charSpace: float = 0
     padToRight: int = 0
     wrapAfter: int = None
+    lineHeight: int = DEFAULT_LINE_HEIGHT
 
     def draw(self, can: canvas, text:str):
         text = text.rjust(self.padToRight)
@@ -32,7 +35,7 @@ class Field:
         y = self.y
         for l in lines:
             can.drawString(self.x, y, l, charSpace=self.charSpace)
-            y-=LINE_HEIGHT
+            y-=self.lineHeight
 
 class BoxedField(Field):
     def __init__(self, *args, **kwargs):
@@ -41,29 +44,30 @@ class BoxedField(Field):
 
 
 fields = {
-    'Intestatario': [ Field(30,220, wrapAfter=34), BoxedField(392,220, wrapAfter=34) ],
-    'Causale': [ Field(30,181), Field(392,179) ],
-    'EseguitoDa': [ Field(30,140, wrapAfter=23), BoxedField(532,141, wrapAfter=23) ],
-    'Via': [ Field(80,108), BoxedField(532,101) ],
-    'Cap': [ Field(80,91), BoxedField(532,75) ],
-    'Localita': [ Field(80,71), BoxedField(607,75) ],
-    'ImportoCent': [ BoxedField(232,261, padToRight=10), BoxedField(699,261, padToRight=10) ],
-    'ImportoInLettere': [ Field(105,247), Field(528,244) ],
-    'ContoNumero': [ BoxedField(90,261, padToRight=8), BoxedField(468,261, padToRight=8) ]
+    'Intestatario': [ Field(25,210, wrapAfter=34), BoxedField(394,210, wrapAfter=34) ],
+    'Causale': [ Field(25,161, wrapAfter=56), Field(435,176, wrapAfter=56, lineHeight=11) ],
+    'EseguitoDa': [ Field(23,120, wrapAfter=24), BoxedField(521,141, wrapAfter=24) ],
+    'Via': [ Field(55,89, wrapAfter=24), BoxedField(521,101) ],
+    'Cap': [ Field(50,60), BoxedField(521,77) ],
+    'Localita': [ Field(140,60), BoxedField(598,77) ],
+    'ImportoCent': [ BoxedField(237,252, padToRight=10), BoxedField(706,252, padToRight=10) ],
+    'ImportoInLettere': [ Field(90,234), Field(500,234) ],
+    'ContoNumero': [ BoxedField(90,251, padToRight=8), BoxedField(470,251, padToRight=8) ]
 }
 
 
+pdfmetrics.registerFont(TTFont('OCRB', io.BytesIO(ocrb2_ttf)))
 PAGE_SIZE = landscape(A4)
 def make_page(bollettino: Bollettino):
     packet = io.BytesIO()
     can = canvas.Canvas(packet, pagesize=PAGE_SIZE)
     #logo = ImageReader(io.BytesIO(logo_png))
     #can.drawImage(logo, 100,300, width=200, preserveAspectRatio=True)
-    can.setFont('Courier', 13)
+    can.setFont('OCRB', 10)
     for k,l in fields.items():
         val = bollettino.__getattribute__(k.lower())
         for f in l:
-            f.draw(can, str(val))
+            f.draw(can, str(val).upper())
     can.save()
     packet.seek(0)
     new_pdf = PdfFileReader(packet)
